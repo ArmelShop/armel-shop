@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Armel Shop</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+body { background: #f7f7f7; padding-bottom: 80px; }
+header { background: #111; color: white; padding: 15px 20px; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+header h1 { font-size: 20px; }
+header h1 span { color: #d4af37; }
+.cart-btn { background: #d4af37; color: #111; border: none; padding: 8px 14px; border-radius: 50px; font-weight: bold; cursor: pointer; }
+.hero { background: linear-gradient(135deg, #111, #444); color: white; padding: 30px 20px; text-align: center; }
+.hero h2 { font-size: 22px; margin-bottom: 8px; }
+.filters { display: flex; gap: 8px; padding: 15px 20px; overflow-x: auto; }
+.filter-btn { background: white; border: 1px solid #ddd; padding: 6px 14px; border-radius: 50px; white-space: nowrap; cursor: pointer; }
+.filter-btn.active { background: #111; color: white; border-color: #111; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; padding: 0 15px 20px; }
+.card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+.card img { width: 100%; height: 180px; object-fit: cover; }
+.card-body { padding: 10px; display: flex; flex-direction: column; flex-grow: 1; }
+.cat { font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
+.name { font-size: 14px; font-weight: 600; margin: 4px 0; }
+.price { color: #d4af37; font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+.add-btn { margin-top: auto; background: #111; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
+.add-btn:active { background: #d4af37; color: #111; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 100; }
+.overlay.open { display: block; }
+.cart { position: fixed; top: 0; right: 0; width: 90%; max-width: 380px; height: 100%; background: white; z-index: 101; transform: translateX(100%); transition: 0.3s; display: flex; flex-direction: column; }
+.cart.open { transform: translateX(0); }
+.cart-head { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.close-x { background: none; border: none; font-size: 24px; cursor: pointer; }
+.cart-items { flex-grow: 1; overflow-y: auto; padding: 10px 15px; }
+.ci { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee; align-items: center; }
+.ci img { width: 55px; height: 65px; object-fit: cover; border-radius: 5px; }
+.ci-info { flex-grow: 1; }
+.ci-info h4 { font-size: 13px; margin-bottom: 3px; }
+.ci-info p { color: #d4af37; font-weight: 600; font-size: 13px; }
+.qty { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.qty button { width: 24px; height: 24px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.rm { background: none; border: none; color: red; font-size: 11px; cursor: pointer; margin-top: 3px; }
+.cart-foot { padding: 15px; border-top: 1px solid #eee; }
+.total-line { display: flex; justify-content: space-between; font-weight: 700; font-size: 17px; margin-bottom: 12px; }
+.checkout { width: 100%; background: #d4af37; color: #111; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; z-index: 200; justify-content: center; align-items: center; padding: 15px; }
+.modal-bg.open { display: flex; }
+.modal { background: white; border-radius: 12px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; padding: 20px; position: relative; }
+.modal h2 { margin-bottom: 15px; }
+.modal label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; margin-top: 10px; }
+.modal input, .modal select, .modal textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+.submit-order { width: 100%; background: #111; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; margin-top: 15px; cursor: pointer; }
+.close-modal { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 22px; cursor: pointer; }
+.empty { text-align: center; color: #888; padding: 30px 0; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 20px; border-radius: 50px; z-index: 300; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+<h1>ARMEL<span>SHOP</span></h1>
+<button class="cart-btn" onclick="openCart()">Panier <span id="count">0</span></button>
+</header>
+<section class="hero">
+<h2>La mode a ton image</h2>
+<p>Livraison rapide en Cote d Ivoire</p>
+</section>
+<div class="filters" id="filters">
+<button class="filter-btn active" data-cat="all">Tout</button>
+<button class="filter-btn" data-cat="Homme">Homme</button>
+<button class="filter-btn" data-cat="Femme">Femme</button>
+<button class="filter-btn" data-cat="Accessoires">Accessoires</button>
+</div>
+<div class="grid" id="grid"></div>
+<div class="overlay" id="overlay" onclick="closeCart()"></div>
+<aside class="cart" id="cart">
+<div class="cart-head">
+<h2>Mon panier</h2>
+<button class="close-x" onclick="closeCart()">x</button>
+</div>
+<div class="cart-items" id="cartItems"></div>
+<div class="cart-foot">
+<div class="total-line"><span>Total</span><span id="total">0 FCFA</span></div>
+<button class="checkout" onclick="openCheckout()">Commander</button>
+</div>
+</aside>
+<div class="modal-bg" id="modalBg">
+<div class="modal">
+<button class="close-modal" onclick="closeCheckout()">x</button>
+<h2>Finaliser la commande</h2>
+<form id="orderForm">
+<label>Nom complet</label>
+<input type="text" id="f-nom" required>
+<label>Telephone</label>
+<input type="tel" id="f-tel" required>
+<label>Email</label>
+<input type="email" id="f-email" required>
+<label>Adresse de livraison</label>
+<textarea id="f-adr" rows="2" required></textarea>
+<label>Mode de paiement</label>
+<select id="f-pay" required>
+<option value="">Choisir...</option>
+<option value="Mobile Money">Mobile Money</option>
+<option value="Paiement a la livraison">Paiement a la livraison</option>
+</select>
+<button type="submit" class="submit-order">Confirmer</button>
+</form>
+</div>
+</div>
+<script>
+let produits = [];
+let panier = JSON.parse(localStorage.getItem('armel_cart') || '[]');
+let filtreActif = 'all';
+function fmt(p) { return new Intl.NumberFormat('fr-FR').format(p) + ' FCFA'; }
+async function charger() {
+const res = await fetch('/api/products');
+produits = await res.json();
+afficher();
+majPanier();
+}
+function afficher() {
+const list = filtreActif === 'all' ? produits : produits.filter(p => p.categorie === filtreActif);
+document.getElementById('grid').innerHTML = list.map(p => `
+<div class="card">
+<img src="${p.image}" alt="${p.nom}">
+<div class="card-body">
+<span class="cat">${p.categorie}</span>
+<h3 class="name">${p.nom}</h3>
+<p class="price">${fmt(p.prix)}</p>
+<button class="add-btn" onclick="ajouter(${p.id})">Ajouter</button>
+</div>
+</div>
+`).join('');
+}
+function ajouter(id) {
+const p = produits.find(x => x.id === id);
+const it = panier.find(x => x.id === id);
+if (it) it.qte++;
+else panier.push({ id, qte: 1 });
+sauver();
+toast(p.nom + ' ajoute au panier');
+}
+function retirer(id) { panier = panier.filter(i => i.id !== id); sauver(); }
+function qte(id, d) {
+const it = panier.find(i => i.id === id);
+if (!it) return;
+it.qte += d;
+if (it.qte <= 0) retirer(id);
+else sauver();
+}
+function sauver() {
+localStorage.setItem('armel_cart', JSON.stringify(panier));
+majPanier();
+}
+function total() {
+return panier.reduce((s, i) => {
+const p = produits.find(x => x.id === i.id);
+return s + (p ? p.prix * i.qte : 0);
+}, 0);
+}
+function majPanier() {
+const nb = panier.reduce((s, i) => s + i.qte, 0);
+document.getElementById('count').textContent = nb;
+const box = document.getElementById('cartItems');
+if (panier.length === 0) {
+box.innerHTML = '<p class="empty">Votre panier est vide</p>';
+} else {
+box.innerHTML = panier.map(i => {
+const p = produits.find(x => x.id === i.id);
+if (!p) return '';
+return `<div class="ci">
+<img src="${p.image}">
+<div class="ci-info">
+<h4>${p.nom}</h4>
+<p>${fmt(p.prix)}</p>
+<div class="qty">
+<button onclick="qte(${p.id},-1)">-</button>
+<span>${i.qte}</span>
+<button onclick="qte(${p.id},1)">+</button>
+</div>
+<button class="rm" onclick="retirer(${p.id})">Supprimer</button>
+</div>
+</div>`;
+}).join('');
+}
+document.getElementById('total').textContent = fmt(total());
+}
+function openCart() { document.getElementById('cart').classList.add('open'); document.getElementById('overlay').classList.add('open'); }
+function closeCart() { document.getElementById('cart').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
+function openCheckout() {
+if (panier.length === 0) { toast('Panier vide'); return; }
+closeCart();
+document.getElementById('modalBg').classList.add('open');
+}
+function closeCheckout() { document.getElementById('modalBg').classList.remove('open'); }
+function toast(msg) {
+const t = document.createElement('div');
+t.className = 'toast';
+t.textContent = msg;
+document.body.appendChild(t);
+setTimeout(() => t.remove(), 2000);
+}
+document.getElementById('filters').addEventListener('click', e => {
+if (!e.target.classList.contains('filter-btn')) return;
+document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+e.target.classList.add('active');
+filtreActif = e.target.dataset.cat;
+afficher();
+});
+document.getElementById('orderForm').addEventListener('submit', async e => {
+e.preventDefault();
+const commande = {
+nom: document.getElementById('f-nom').value,
+telephone: document.getElementById('f-tel').value,
+email: document.getElementById('f-email').value,
+adresse: document.getElementById('f-adr').value,
+paiement: document.getElementById('f-pay').value,
+articles: panier.map(i => {
+const p = produits.find(x => x.id === i.id);
+return { id: p.id, nom: p.nom, qte: i.qte, prix: p.prix };
+}),
+total: total()
+};
+const res = await fetch('/api/orders', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(commande)
+});
+if (res.ok) {
+toast('Commande enregistree. Merci ' + commande.nom);
+panier = [];
+sauver();
+closeCheckout();
+e.target.reset();
+} else {
+toast('Erreur lors de la commande');
+}
+});
+charger();
+</script>
+</body>
+</html>
